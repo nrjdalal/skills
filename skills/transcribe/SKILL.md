@@ -1,6 +1,6 @@
 ---
 name: transcribe
-description: Transcribe YouTube videos locally with yt-dlp and Parakeet. Use when the user gives a video or channel link and wants a transcript, summary, or analysis across videos.
+description: Transcribe YouTube videos locally on Apple Silicon with yt-dlp and Parakeet. Use when the user pastes a YouTube or channel link, asks to transcribe or summarise a video, or wants analysis across several videos.
 ---
 
 # Transcribe

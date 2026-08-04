@@ -1,7 +1,7 @@
 {
-  "name": "video-research",
+  "name": "nrjdalal-skills",
   "version": "0.1.0",
-  "description": "Transcribe YouTube videos locally on Apple Silicon with yt-dlp and Parakeet.",
+  "description": "Skills for Claude Code, built and used on Apple Silicon.",
   "author": { "name": "Neeraj Dalal", "url": "https://github.com/nrjdalal" },
   "repository": "https://github.com/nrjdalal/skills",
   "license": "MIT",
