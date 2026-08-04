@@ -1,4 +1,4 @@
-# agent-skills
+# skills
 
 A [Claude Code](https://claude.com/claude-code) plugin marketplace. Skills follow the
 [Agent Skills](https://agentskills.io) open standard.
@@ -6,23 +6,23 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace. Skills follo
 ## Install
 
 ```
-/plugin marketplace add nrjdalal/agent-skills
+/plugin marketplace add nrjdalal/skills
 /plugin install video-research@nrjdalal-skills
 ```
 
 Update later with `/plugin marketplace update nrjdalal-skills`.
 
-> The marketplace is named `nrjdalal-skills`, not `agent-skills` — that name is
-> reserved for Anthropic's official marketplaces and a third-party marketplace
-> using it fails to load.
+> The marketplace is named `nrjdalal-skills`. Names like `agent-skills` and
+> `anthropic-plugins` are reserved for Anthropic's official marketplaces — a
+> third-party marketplace using one is rejected as untrusted.
 
 ### Without the marketplace
 
 Any skill here is a plain directory, so you can copy one straight in:
 
 ```bash
-git clone https://github.com/nrjdalal/agent-skills
-cp -r agent-skills/plugins/video-research/skills/video-research ~/.claude/skills/
+git clone https://github.com/nrjdalal/skills
+cp -r skills/plugins/video-research/skills/video-research ~/.claude/skills/
 ```
 
 Use `.claude/skills/` inside a repo instead to scope it to one project.
