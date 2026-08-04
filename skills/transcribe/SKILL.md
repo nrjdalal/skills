@@ -34,24 +34,48 @@ The payload is ~600 KB a video, nearly all of it `formats` and `automatic_captio
 that never reach the store. Keep the twenty-odd fields the frontmatter needs and drop
 the rest, or a channel-sized batch leaves 50 MB of JSON behind for no reason.
 
-`language` is the uploader's declared default, not a description of the audio. Do not
-route on it. On a channel of 86, two declared `hi`: one was a silent trailer and the
-other was majority-English Hinglish that Parakeet handled well, romanising the Hindi
-words so the whole transcript stays in one script.
+### English only
 
-Sending that video to `whisper-large-v3` instead — the obvious fix — made it worse.
-Whisper detects Hindi, forced or automatic, and then renders the *English* speech in
-Devanagari with repetition loops, at 5x the compute:
+Transcribe English. If a video is not English, drop it — no file, no partial record.
+
+`language` in the metadata cannot make that call. It is the uploader's declared
+default, not a description of the audio. On one channel of 86 it read `hi` for a video
+that was majority-English Hinglish, which is a video you want.
+
+Decide from the speech instead. Parakeet writes everything in Latin script, so the test
+is the rate of English function words — *the, and, is, to, of, that, it* — which a
+fluent English speaker cannot avoid and which no other language supplies:
+
+```python
+from scripts.english import english_ratio     # ratio, token_count
+ratio, n = english_ratio(text)
+```
+
+Measured across 110 stored transcripts and two deliberately foreign controls:
 
 ```
-parakeet-tdt-0.6b-v2   820 words   30s   "how much would you pay ... computer use karna"
-whisper-large-v3       969 words  196s   Devanagari transliteration of the English
+spanish tutorial        0.111   drop
+hindi news              0.135   drop
+                    --- gap ---
+english, lowest of 108  0.439   keep
+hinglish, declared hi   0.513   keep
+english median          0.493
 ```
 
-The tell for a genuinely non-English video is romanised foreign words in the output,
-not the metadata field. Read the transcript, not the label.
+**Cut at 0.30.** It sits mid-gap with more than 3x separation on either side.
 
-**Done when:** the JSON exists for every uncached video.
+Cheapest ordering, since the probe is only needed when the label is in doubt:
+
+- `language` starts with `en` → transcribe in full, then score the finished text. It is
+  already written, so the check is free, and it still catches a mislabelled video.
+- anything else → transcribe a **150-second probe** first, about 3 seconds of compute,
+  and drop the video outright if it scores below the cut.
+
+Below the cut, delete the audio and move on. A bad transcript in the store is worse
+than an absent one: it reads as fact, and everything downstream that greps the corpus
+will believe it.
+
+**Done when:** every uncached video has metadata and is known to be English or dropped.
 
 ## 2. Take hand-written subtitles if they exist
 
