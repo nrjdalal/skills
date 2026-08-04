@@ -1,0 +1,29 @@
+{
+  "name": "nrjdalal-skills",
+  "owner": {
+    "name": "Neeraj Dalal",
+    "url": "https://github.com/nrjdalal"
+  },
+  "description": "Skills for Claude Code, built and used on Apple Silicon.",
+  "plugins": [
+    {
+      "name": "video-research",
+      "source": "./plugins/video-research",
+      "description": "Transcribe YouTube videos locally on Apple Silicon with yt-dlp and Parakeet.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Neeraj Dalal",
+        "url": "https://github.com/nrjdalal"
+      },
+      "repository": "https://github.com/nrjdalal/skills",
+      "license": "MIT",
+      "keywords": [
+        "transcription",
+        "youtube",
+        "mlx",
+        "apple-silicon",
+        "parakeet"
+      ]
+    }
+  ]
+}
