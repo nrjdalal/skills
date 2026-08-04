@@ -91,6 +91,11 @@ words: 1580
 `source` records where the text came from, so a machine transcript can be re-fetched
 later if the uploader adds real subtitles.
 
+A file keeps the name it was born with. Uploaders retitle videos, and the id already
+carries identity, so leave the slug frozen at whatever the title was on the day it was
+transcribed. Renaming to track a new title buys nothing and risks a second copy of a
+video you already have.
+
 The slug is the lowercased title with runs of non-alphanumerics collapsed to hyphens,
 apostrophes dropped rather than hyphenated, trimmed to 60 characters:
 
