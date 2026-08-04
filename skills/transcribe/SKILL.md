@@ -91,15 +91,17 @@ words: 1580
 `source` records where the text came from, so a machine transcript can be re-fetched
 later if the uploader adds real subtitles.
 
-A file keeps the name it was born with. Uploaders retitle videos, and the id already
-carries identity, so leave the slug frozen at whatever the title was on the day it was
-transcribed. Renaming to track a new title buys nothing and risks a second copy of a
-video you already have.
+The `-<id>` suffix is the only fixed part of the name. Lookups glob on it, so it has to
+survive; the slug in front carries no meaning to anything but a person reading the
+directory.
 
-Frontmatter is the mutable half. On a re-transcription, rewrite it in full — `title`,
-`source`, `transcribed`, `words` — so it describes the video as it is now, and let the
-filename stay put. A slug that no longer matches `title` is the expected state of a
-video that has been renamed since, not a defect to repair.
+So on a re-transcription, refresh both halves: rewrite the frontmatter in full —
+`title`, `source`, `transcribed`, `words` — and regenerate the slug from the current
+title. Uploaders retitle videos, and a directory read by humans should say what each
+video is called now.
+
+Write the new file and remove the old one in the same pass. Two files sharing an id is
+the one outcome to avoid, since the glob would then return both.
 
 The slug is the lowercased title with runs of non-alphanumerics collapsed to hyphens,
 apostrophes dropped rather than hyphenated, trimmed to 60 characters:
