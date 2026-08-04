@@ -146,7 +146,7 @@ routinely contains `:` and `#`.
 Parakeet infers from pauses, which mark where the speaker drew breath rather than
 where the argument turned.
 
-`source` records where the text came from the text came from, so a machine transcript can be re-fetched
+`source` records where the text came from, so a machine transcript can be re-fetched
 later if the uploader adds real subtitles. `skill` records what produced the file, so
 provenance survives a repository being renamed.
 
