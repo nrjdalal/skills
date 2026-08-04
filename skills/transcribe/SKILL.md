@@ -64,9 +64,14 @@ yt-dlp -f bestaudio -x --audio-format wav \
 
 16 kHz mono is what the model reads.
 
-Add `--sleep-interval 2 --max-sleep-interval 6` for anything past a handful of videos.
-Sustained downloading is what draws the throttle described below, and pacing costs a
-few minutes against a run measured in hours.
+Add `--sleep-interval 7 --max-sleep-interval 21` for anything past a handful of videos.
+Sustained downloading is what draws the throttle described below.
+
+The pacing is close to free in a batch, because downloads run ahead of the GPU rather
+than in front of it. A 50-minute video costs about 50 s to transcribe and well under
+that to fetch, so a randomised 7-21 s wait lands inside the slack and the transcriber
+never waits. Pacing only shows up in the wall clock on a handful of short videos, where
+the run is too small to draw a throttle anyway.
 
 **Done when:** a `.wav` exists for every video still uncached.
 
