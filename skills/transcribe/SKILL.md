@@ -64,6 +64,10 @@ yt-dlp -f bestaudio -x --audio-format wav \
 
 16 kHz mono is what the model reads.
 
+Add `--sleep-interval 2 --max-sleep-interval 6` for anything past a handful of videos.
+Sustained downloading is what draws the throttle described below, and pacing costs a
+few minutes against a run measured in hours.
+
 **Done when:** a `.wav` exists for every video still uncached.
 
 ## 4. Transcribe
@@ -239,6 +243,37 @@ runtime one.
 
 Changing the model is a person's decision and a one-line edit here, which then ships
 to everyone using the skill.
+
+## 403 means wait, not fail
+
+A long batch will start returning
+
+```
+ERROR: unable to download video data: HTTP Error 403: Forbidden
+```
+
+on videos that are public, not age-restricted, and listing five audio formats. This is
+throttling, and it is about how hard you have been pulling rather than about the video.
+It appears part-way into a run and gets more frequent as the run goes on.
+
+The tell is that nothing about the video explains it. Check `availability` before
+theorising — when it says `public` the video is fine and the fetch is what was refused.
+
+It does not respond to the things that look like fixes. Another player client cannot
+see an audio format at all. `--retries 10 --retry-sleep 5` exhausts and still fails,
+because seconds are the wrong timescale. What clears it is stopping.
+
+So finish the batch, let the pressure come off, and re-run. The store is the resume
+key, so a second pass costs only the videos that are still missing:
+
+```bash
+grep "download failed" run.log | sed -E 's/.*failed ([A-Za-z0-9_-]+):.*/\1/' | sort -u
+```
+
+Treating a 403 as permanent is the mistake. In a 49-hour run over 86 videos, 7 failed
+this way and all 7 downloaded on an ordinary retry once the run was over, with the same
+`bestaudio` format that had just been refused. Skipping them would have quietly dropped
+8% of the channel.
 
 ## Several videos
 
