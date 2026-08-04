@@ -1,50 +1,62 @@
 # agent-skills
 
-Skills for [Claude Code](https://claude.com/claude-code). Each directory is one
-skill: a `SKILL.md` the agent reads when the task matches, plus any scripts it needs.
+A [Claude Code](https://claude.com/claude-code) plugin marketplace. Skills follow the
+[Agent Skills](https://agentskills.io) open standard.
 
-## Skills
+## Install
 
-| Skill | What it does |
-|---|---|
-| [`video-research`](./video-research) | Transcribe and analyse YouTube videos locally on Apple Silicon — no API keys, no audio leaving the machine |
+```
+/plugin marketplace add nrjdalal/agent-skills
+/plugin install video-research@nrjdalal-skills
+```
 
-## Installing
+Update later with `/plugin marketplace update nrjdalal-skills`.
 
-Clone into your skills directory:
+> The marketplace is named `nrjdalal-skills`, not `agent-skills` — that name is
+> reserved for Anthropic's official marketplaces and a third-party marketplace
+> using it fails to load.
+
+### Without the marketplace
+
+Any skill here is a plain directory, so you can copy one straight in:
 
 ```bash
-git clone https://github.com/nrjdalal/agent-skills ~/.claude/skills-src
-ln -s ~/.claude/skills-src/video-research ~/.claude/skills/video-research
+git clone https://github.com/nrjdalal/agent-skills
+cp -r agent-skills/plugins/video-research/skills/video-research ~/.claude/skills/
 ```
 
-Or copy a single skill in:
+Use `.claude/skills/` inside a repo instead to scope it to one project.
 
-```bash
-cp -r video-research ~/.claude/skills/
+## Plugins
+
+| Plugin | Skills | What it does |
+| :-- | :-- | :-- |
+| [`video-research`](./plugins/video-research) | `/video-research` | Transcribe YouTube videos locally on Apple Silicon with yt-dlp and Parakeet |
+
+## Layout
+
+```
+.claude-plugin/marketplace.json          catalog of plugins
+plugins/
+  video-research/
+    .claude-plugin/plugin.json           plugin manifest
+    skills/
+      video-research/SKILL.md            the skill itself
 ```
 
-Project-scoped instead of global? Use `.claude/skills/` inside the repo.
+Skills live in a plugin's `skills/` directory, one directory per skill, each with a
+`SKILL.md`. The directory name becomes the command, so `/video-research` here.
 
-## Writing skills
+## Adding a skill
 
-A skill is a folder with a `SKILL.md` whose frontmatter carries a `name` and a
-`description`. The description is what the agent matches against, so it should say
-*when to reach for this*, not just what it is.
+1. `plugins/<plugin>/skills/<skill>/SKILL.md` with `name` and `description` frontmatter.
+   The `description` is what Claude matches on, so say *when to reach for this*, not
+   just what it is.
+2. Add the plugin to `.claude-plugin/marketplace.json` if it's new.
+3. `claude plugin validate .` before pushing.
 
-```markdown
----
-name: my-skill
-description: Does X. Use when the user asks for Y.
----
-
-# My skill
-
-Instructions the agent follows.
-```
-
-The useful content is rarely the happy path — it's the failure modes, the defaults
-worth having, and the measurements that justify them.
+Skills can also carry `reference.md`, `scripts/`, `templates/` and `assets/` alongside
+`SKILL.md` when they need supporting files.
 
 ## Licence
 
