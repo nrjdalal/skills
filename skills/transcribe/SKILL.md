@@ -30,6 +30,27 @@ yt-dlp --skip-download --dump-single-json "$URL" > VIDEO_ID.json
 One call, and everything the store file needs is in it — `upload_date`, `chapters`,
 `tags`, `description`, `duration`, `language` — so nothing below costs a second fetch.
 
+The payload is ~600 KB a video, nearly all of it `formats` and `automatic_captions`
+that never reach the store. Keep the twenty-odd fields the frontmatter needs and drop
+the rest, or a channel-sized batch leaves 50 MB of JSON behind for no reason.
+
+`language` is the uploader's declared default, not a description of the audio. Do not
+route on it. On a channel of 86, two declared `hi`: one was a silent trailer and the
+other was majority-English Hinglish that Parakeet handled well, romanising the Hindi
+words so the whole transcript stays in one script.
+
+Sending that video to `whisper-large-v3` instead — the obvious fix — made it worse.
+Whisper detects Hindi, forced or automatic, and then renders the *English* speech in
+Devanagari with repetition loops, at 5x the compute:
+
+```
+parakeet-tdt-0.6b-v2   820 words   30s   "how much would you pay ... computer use karna"
+whisper-large-v3       969 words  196s   Devanagari transliteration of the English
+```
+
+The tell for a genuinely non-English video is romanised foreign words in the output,
+not the metadata field. Read the transcript, not the label.
+
 **Done when:** the JSON exists for every uncached video.
 
 ## 2. Take hand-written subtitles if they exist
@@ -149,7 +170,18 @@ routinely contains `:` and `#`.
 
 `chapters` are the uploader's own section headings. They beat the paragraph breaks
 Parakeet infers from pauses, which mark where the speaker drew breath rather than
-where the argument turned.
+where the argument turned — so put them in the body too, not only the frontmatter:
+
+```python
+for t, para in paragraphs:
+    while chapters and chapters[0][0] <= t:
+        out.append(f"\n## {chapters.pop(0)[1]}\n")
+    out.append(f"[{t//60}:{t%60:02d}] {para}")
+```
+
+The result reads as a document with real sections rather than an undifferentiated
+wall, and the headings survive into anything that later chunks or searches the file.
+A channel of 86 videos carried 1,001 of them, free.
 
 `source` records where the text came from, so a machine transcript can be re-fetched
 later if the uploader adds real subtitles. `skill` records what produced the file, so
@@ -211,6 +243,37 @@ chunks and about 2 minutes of compute.
 This failure goes **silent** when a loop swallows stderr: the exception is discarded,
 no file is written, and the run reports success. Let stderr through so a chunk error
 reaches you.
+
+### Cap the memory before the first batch
+
+Two MLX behaviours will take the whole machine down on unified memory, and neither
+raises anything on the way:
+
+**Lazy evaluation.** `model(...)` builds a graph, it does not compute. A batch loop
+with no `mx.eval()` inside it accumulates every batch unevaluated, each holding its
+full activation chain, until something at the end forces all of them at once. The
+symptom is a loop that finishes suspiciously fast and then a long pause.
+
+**The buffer pool.** MLX caches Metal buffers rather than returning them to the OS, and
+`mx.eval()` does nothing about that. Padding each batch to its own longest sequence
+makes every batch ask for a differently-shaped buffer that cannot reuse a cached one,
+so the pool grows for the length of the run.
+
+```python
+mx.set_memory_limit(4 * 1024**3)     # allocation fails instead of taking the machine
+mx.set_cache_limit(1 * 1024**3)
+...
+mx.eval(v)                            # compute this batch now
+mx.clear_cache()                      # release the pool every batch
+```
+
+Measure with `mx.get_active_memory()`, `mx.get_peak_memory()` and
+`mx.get_cache_memory()`. **`ru_maxrss` cannot see any of this** — it reports the Python
+heap and only ever rises, so it reads flat and reassuring while the pool fills. Sorting
+inputs by length before batching keeps padding uniform and lets buffers be reused.
+
+The limit matters more than the measurement: with it set, being wrong about the cause
+raises an exception instead of freezing the Mac.
 
 ## The model is fixed
 
@@ -287,12 +350,55 @@ yt-dlp --flat-playlist --playlist-end 10 \
   --print "%(id)s|%(title)s|%(duration)s" "https://www.youtube.com/@HANDLE/videos"
 ```
 
-Check the store for all of them first, then work only the misses. Load the model once,
-outside the loop — it is 2.3 GB, and reloading per video costs minutes across a batch.
-Run one file at a time: a single transcription already saturates the GPU, and
-concurrent runs push back toward the ceiling.
+Check the store for all of them first, then work only the misses.
 
-Expect 30–47× realtime, so ten half-hour videos land in under ten minutes.
+### Filtering a channel by date
+
+`--flat-playlist` prints `NA` for `upload_date`, so there is no flag for "everything
+since 2024". The listing is newest first, which makes it sorted, so **binary search the
+boundary** instead of dating every entry. On a 244-video channel that was 8 probes
+rather than 244 calls:
+
+```python
+lo, hi = 0, len(ids)                      # first index older than the cutoff
+while lo < hi:
+    mid = (lo + hi) // 2
+    if upload_date(ids[mid]) >= CUTOFF: lo = mid + 1
+    else: hi = mid
+```
+
+### Let the downloads run ahead of the GPU
+
+Load the model once — it is 2.3 GB and reloading per video costs minutes across a
+batch. Then keep **one** download running ahead of the transcriber, no more:
+
+```python
+q = queue.Queue(maxsize=2)                # bounded: never race ahead of the GPU
+def fetcher():
+    for vid in todo: q.put((vid, meta(vid), audio(vid)))
+    q.put(None)
+threading.Thread(target=fetcher, daemon=True).start()
+```
+
+Network and GPU are different resources, so fetching the next video while the current
+one transcribes costs nothing and hides the downloads entirely. A 49-hour run came out
+**97% GPU-bound**: 66.5 minutes of compute inside 66.8 minutes of wall clock. Without
+it, several GB of sequential downloading adds to the total instead of disappearing
+into it.
+
+This is not parallel transcription. One video is on the GPU at a time — concurrent
+inference pushes back toward the ceiling and wins nothing, since a single run already
+saturates it. Expect 40-50x realtime.
+
+### Re-run rather than repair
+
+Step 0 makes a batch **resumable**: the store is the record of what is done, so
+re-running works only the misses and costs nothing for the rest. Delete the audio for
+each video once its store file is written and disk stays flat instead of accumulating.
+
+That is the answer to almost any failure mid-batch. Do not build recovery paths — let
+the run finish, then run it again. Seven throttled downloads in an 86-video batch came
+back on a plain second pass that took six minutes, because it only touched those seven.
 
 ## Reading what comes back
 
