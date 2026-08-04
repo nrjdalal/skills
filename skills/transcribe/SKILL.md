@@ -77,9 +77,13 @@ result = model.transcribe("VIDEO_ID.wav", chunk_duration=120.0, overlap_duration
 
 `result.sentences` carries `.start` / `.end`, which become the `[m:ss]` markers.
 
-**Done when:** every video has a store file whose word count is plausible for its
-runtime — roughly 150 words per minute. One far short of that transcribed its first
-chunk and stopped.
+**Done when:** every video has a store file and every chunk error reached you.
+
+Word count proves nothing about a transcript. A trailer, a music video, a silent demo
+or a gameplay reel can be minutes long and hold a handful of words, and each is a
+correct transcript of what was said. Take the text the model returns as what the video
+contains. A truncated run announces itself through the exception in the next section,
+which is the thing to keep visible.
 
 ## The store
 
