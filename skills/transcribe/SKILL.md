@@ -5,13 +5,15 @@ description: Transcribe YouTube videos locally with yt-dlp and Parakeet MLX, cac
 
 # Transcribe
 
-Transcripts live in `~/.agentwork/transcribe/<slug>-<id>.md`, one file per video. The
-**id** is the key and the slug is decoration, so every lookup globs on the id.
+Transcripts live in `~/.agent-work/transcribe/<channel>-<title>-<id>.md`, one file per
+video. The **id** is the key and everything before it is decoration, so every lookup
+globs on the id. Leading with the channel makes the directory sort into channel groups
+on its own.
 
 ## 0. Check the store
 
 ```bash
-ls ~/.agentwork/transcribe/*-VIDEO_ID.md 2>/dev/null
+ls ~/.agent-work/transcribe/*-VIDEO_ID.md 2>/dev/null
 ```
 
 A hit means the work is already done — read that file and skip to the analysis. Titles
@@ -81,6 +83,7 @@ duration: 608
 source: parakeet-tdt-0.6b-v2
 transcribed: 2026-08-04
 words: 1580
+skill: transcribe@OWNER/REPO
 ---
 
 [0:00] First paragraph of speech.
@@ -89,7 +92,8 @@ words: 1580
 ```
 
 `source` records where the text came from, so a machine transcript can be re-fetched
-later if the uploader adds real subtitles.
+later if the uploader adds real subtitles. `skill` records what produced the file, so
+provenance survives a repository being renamed.
 
 The `-<id>` suffix is the only fixed part of the name. Lookups glob on it, so it has to
 survive; the slug in front carries no meaning to anything but a person reading the
@@ -103,18 +107,20 @@ video is called now.
 Write the new file and remove the old one in the same pass. Two files sharing an id is
 the one outcome to avoid, since the glob would then return both.
 
-The slug is the lowercased title with runs of non-alphanumerics collapsed to hyphens,
-apostrophes dropped rather than hyphenated, trimmed to 60 characters:
+Both slugs lowercase, collapse runs of non-alphanumerics to hyphens, and drop
+apostrophes rather than hyphenating them — channel capped at 30 characters, title at 60:
 
 ```python
 import re
-slug = re.sub(r"-{2,}", "-",
-        re.sub(r"[^a-z0-9]+", "-",
-         re.sub(r"['’]", "", title.lower()))).strip("-")[:60]
+def slug(t, cap):
+    s = re.sub(r"['’]", "", t.lower())
+    return re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", s)).strip("-")[:cap]
+
+name = f"{slug(channel, 30)}-{slug(title, 60)}-{video_id}.md"
 ```
 
 Frontmatter makes the whole directory a corpus:
-`grep -l "some topic" ~/.agentwork/transcribe/*.md`.
+`grep -l "some topic" ~/.agent-work/transcribe/*.md`.
 
 ## The ceiling
 
