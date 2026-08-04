@@ -1,9 +1,9 @@
 ---
-name: video-research
+name: transcribe
 description: Transcribe YouTube videos locally with yt-dlp and Parakeet. Use when the user gives a video or channel link and wants a transcript, summary, or analysis across videos.
 ---
 
-# Video research
+# Transcribe
 
 Download audio with yt-dlp, transcribe with Parakeet on MLX. Everything stays local.
 

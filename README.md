@@ -22,7 +22,7 @@ Any skill here is a plain directory, so you can copy one straight in:
 
 ```bash
 git clone https://github.com/nrjdalal/skills
-cp -r skills/plugins/video-research/skills/video-research ~/.claude/skills/
+cp -r skills/plugins/video-research/skills/transcribe ~/.claude/skills/
 ```
 
 Use `.claude/skills/` inside a repo instead to scope it to one project.
@@ -31,7 +31,7 @@ Use `.claude/skills/` inside a repo instead to scope it to one project.
 
 | Plugin | Skills | What it does |
 | :-- | :-- | :-- |
-| [`video-research`](./plugins/video-research) | `/video-research` | Transcribe YouTube videos locally on Apple Silicon with yt-dlp and Parakeet |
+| [`video-research`](./plugins/video-research) | `/transcribe` | Transcribe YouTube videos locally on Apple Silicon with yt-dlp and Parakeet |
 
 ## Layout
 
@@ -41,11 +41,11 @@ plugins/
   video-research/
     .claude-plugin/plugin.json           plugin manifest
     skills/
-      video-research/SKILL.md            the skill itself
+      transcribe/SKILL.md                the skill itself
 ```
 
 Skills live in a plugin's `skills/` directory, one directory per skill, each with a
-`SKILL.md`. The directory name becomes the command, so `/video-research` here.
+`SKILL.md`. The directory name becomes the command, so `/transcribe` here.
 
 ## Adding a skill
 
