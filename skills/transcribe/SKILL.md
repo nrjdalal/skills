@@ -96,6 +96,11 @@ carries identity, so leave the slug frozen at whatever the title was on the day 
 transcribed. Renaming to track a new title buys nothing and risks a second copy of a
 video you already have.
 
+Frontmatter is the mutable half. On a re-transcription, rewrite it in full — `title`,
+`source`, `transcribed`, `words` — so it describes the video as it is now, and let the
+filename stay put. A slug that no longer matches `title` is the expected state of a
+video that has been renamed since, not a defect to repair.
+
 The slug is the lowercased title with runs of non-alphanumerics collapsed to hyphens,
 apostrophes dropped rather than hyphenated, trimmed to 60 characters:
 
