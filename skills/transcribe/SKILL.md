@@ -73,10 +73,10 @@ chunk and stopped.
 
 ```markdown
 ---
-title: Opus 5 Built An F1 Game... for $1,200
-url: https://www.youtube.com/watch?v=viHqe5QqTd0
-id: viHqe5QqTd0
-channel: Better Stack
+title: The Video Title, Verbatim
+url: https://www.youtube.com/watch?v=VIDEO_ID
+id: VIDEO_ID
+channel: Channel Name
 duration: 608
 source: parakeet-tdt-0.6b-v2
 transcribed: 2026-08-04
@@ -102,7 +102,7 @@ slug = re.sub(r"-{2,}", "-",
 ```
 
 Frontmatter makes the whole directory a corpus:
-`grep -l "Apple Silicon" ~/.agentwork/transcribe/*.md`.
+`grep -l "some topic" ~/.agentwork/transcribe/*.md`.
 
 ## The ceiling
 
