@@ -21,13 +21,22 @@ change and ids do not, so match the id and let the slug be whatever it is.
 
 **Done when:** each requested video is known to be cached or missing.
 
-## 1. Take hand-written subtitles if they exist
+## 1. Pull the metadata
 
 ```bash
-yt-dlp --list-subs --skip-download "$URL" | grep -i "available subtitles"
+yt-dlp --skip-download --dump-single-json "$URL" > VIDEO_ID.json
 ```
 
-`Available subtitles` means a person wrote them, and they beat the model:
+One call, and everything the store file needs is in it — `upload_date`, `chapters`,
+`tags`, `description`, `duration`, `language` — so nothing below costs a second fetch.
+
+**Done when:** the JSON exists for every uncached video.
+
+## 2. Take hand-written subtitles if they exist
+
+`subtitles` in that JSON is the hand-written track and `automatic_captions` is
+YouTube's own ASR. A non-empty `subtitles` means a person wrote them, and they beat
+the model:
 
 ```bash
 yt-dlp --write-sub --sub-lang en --sub-format vtt --skip-download -o "%(id)s" "$URL"
@@ -36,8 +45,9 @@ yt-dlp --write-sub --sub-lang en --sub-format vtt --skip-download -o "%(id)s" "$
 Strip the VTT timing into the store format below, record `source: subtitles`, and the
 video is finished.
 
-`Available automatic captions` is YouTube's own ASR — no punctuation, mangled proper
-nouns, worse than Parakeet. Treat that as no subtitles and continue to step 2.
+`automatic_captions` runs to 150+ languages on nearly every video and is machine ASR —
+no punctuation, mangled proper nouns, worse than Parakeet. Treat a video with only
+those as having no subtitles and continue.
 
 Use `--write-sub` alone. It fetches hand-written subtitles only and writes nothing
 when there are none, so a missing track stays visibly missing. `--write-auto-sub` is
@@ -45,7 +55,7 @@ the flag that would quietly substitute the machine version.
 
 **Done when:** a `.vtt` exists, or there is no hand-written track.
 
-## 2. Get the audio
+## 3. Get the audio
 
 ```bash
 yt-dlp -f bestaudio -x --audio-format wav \
@@ -56,7 +66,7 @@ yt-dlp -f bestaudio -x --audio-format wav \
 
 **Done when:** a `.wav` exists for every video still uncached.
 
-## 3. Transcribe
+## 4. Transcribe
 
 ```python
 from parakeet_mlx import from_pretrained
@@ -75,24 +85,60 @@ chunk and stopped.
 
 ```markdown
 ---
-title: The Video Title, Verbatim
+title: "The Video Title, Verbatim"
 url: https://www.youtube.com/watch?v=VIDEO_ID
 id: VIDEO_ID
-channel: Channel Name
+channel: "Channel Name"
+channel_id: UC...
+handle: "@handle"
 uploaded: 2026-08-03
+published: 2026-08-03T18:30:30
 duration: 608
+language: en
+category: "Science & Technology"
+age_limit: 0
+was_live: false
+resolution: 2560x1440
+fps: 30
+thumbnail: https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg
 source: parakeet-tdt-0.6b-v2
 transcribed: 2026-08-04
-words: 1580
+words: 2420
 skill: transcribe@OWNER/REPO
+tags: ["one", "two", "three"]
+chapters:
+  - "0:00 Intro"
+  - "2:37 The Part That Matters"
+description: |
+  The uploader's description, verbatim.
 ---
 
 [0:00] First paragraph of speech.
 
-[1:24] Next paragraph.
+[2:37] Next paragraph.
 ```
 
-`source` records where the text came from, so a machine transcript can be re-fetched
+**Everything static goes in; nothing dynamic does.** A field that describes the video
+is true forever, so storing it makes the file readable offline and greppable across
+the corpus. A field that describes the video's *reception* — `view_count`,
+`like_count`, `comment_count`, `channel_follower_count` — is a number that was true
+for one second, and a file that reports 11,172 views a year later is not stale, it is
+wrong. Fetch those live if you ever need them.
+
+The same test excludes the format block — `format_id`, `filesize_approx`, `vbr`,
+`ext`, `protocol`. Those look static but describe the stream yt-dlp happened to pick,
+not the video, so they change with the flags rather than with reality.
+
+Two mechanical notes, both learned by breaking them: **quote the handle**, because a
+bare `@` is a reserved YAML indicator and an unquoted `handle: @name` makes the whole
+file unparseable. And take `description` as a `|` block — it is multi-line, and it
+routinely contains `:` and `#`.
+
+`chapters` are the uploader's own section headings. They beat the paragraph breaks
+Parakeet infers from pauses, which mark where the speaker drew breath rather than
+where the argument turned.
+
+`source` records where the text came from the text came from, so a machine transcript can be re-fetched
 later if the uploader adds real subtitles. `skill` records what produced the file, so
 provenance survives a repository being renamed.
 
@@ -130,6 +176,10 @@ yt-dlp --skip-download --print "%(upload_date)s" "$URL"   # 20260803
 
 Frontmatter makes the whole directory a corpus:
 `grep -l "some topic" ~/.agent-work/transcribe/*.md`.
+
+Descriptions are stored verbatim, boilerplate and all, so a channel's standing link
+block sits in every one of its files. Search the transcript body when you want what
+was said, and the frontmatter when you want what it was filed under.
 
 ## The ceiling
 
