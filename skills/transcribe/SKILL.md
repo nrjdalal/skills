@@ -5,10 +5,10 @@ description: Transcribe YouTube videos locally with yt-dlp and Parakeet MLX, cac
 
 # Transcribe
 
-Transcripts live in `~/.agent-work/transcribe/<channel>-<title>-<id>.md`, one file per
-video. The **id** is the key and everything before it is decoration, so every lookup
-globs on the id. Leading with the channel makes the directory sort into channel groups
-on its own.
+Transcripts live in `~/.agent-work/transcribe/<channel>-<upload-date>-<title>-<id>.md`,
+one file per video. The **id** is the key and everything before it is decoration, so
+every lookup globs on the id. Channel then date means a plain `ls` groups by channel and
+runs chronologically inside each one.
 
 ## 0. Check the store
 
@@ -79,6 +79,7 @@ title: The Video Title, Verbatim
 url: https://www.youtube.com/watch?v=VIDEO_ID
 id: VIDEO_ID
 channel: Channel Name
+uploaded: 2026-08-03
 duration: 608
 source: parakeet-tdt-0.6b-v2
 transcribed: 2026-08-04
@@ -100,7 +101,7 @@ survive; the slug in front carries no meaning to anything but a person reading t
 directory.
 
 So on a re-transcription, refresh both halves: rewrite the frontmatter in full —
-`title`, `source`, `transcribed`, `words` — and regenerate the slug from the current
+`title`, `source`, `transcribed`, `words` — and regenerate the name from the current
 title. Uploaders retitle videos, and a directory read by humans should say what each
 video is called now.
 
@@ -116,7 +117,15 @@ def slug(t, cap):
     s = re.sub(r"['’]", "", t.lower())
     return re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", s)).strip("-")[:cap]
 
-name = f"{slug(channel, 30)}-{slug(title, 60)}-{video_id}.md"
+name = f"{slug(channel, 30)}-{uploaded}-{slug(title, 60)}-{video_id}.md"
+```
+
+The date is the video's **upload** date, not the day it was transcribed. It describes
+the video, never changes, and so keeps the filename stable across re-transcriptions.
+`--flat-playlist` reports it as `NA`, but the per-video call in step 1 has it:
+
+```bash
+yt-dlp --skip-download --print "%(upload_date)s" "$URL"   # 20260803
 ```
 
 Frontmatter makes the whole directory a corpus:
