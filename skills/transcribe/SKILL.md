@@ -199,43 +199,42 @@ This failure goes **silent** when a loop swallows stderr: the exception is disca
 no file is written, and the run reports success. Let stderr through so a chunk error
 reaches you.
 
-## Watching for a better model
+## The model is fixed
 
-`parakeet-tdt-0.6b-v2` is the choice because it won a head-to-head against every
-other MLX build on English proper nouns. Its multilingual successor `v3` loses:
-it only capitalises a product name at the start of a sentence, writing "homebrew"
-mid-sentence where v2 writes "Homebrew". Spreading capacity across 25 languages
-costs English casing.
+`parakeet-tdt-0.6b-v2` is not a default, it is a result. It beat every other MLX build
+on English proper nouns, and its own multilingual successor `v3` loses to it: v3
+capitalises a product name only at the start of a sentence, writing "homebrew"
+mid-sentence where v2 writes "Homebrew". Spreading capacity across 25 languages costs
+English casing.
 
-That ranking is a fact about today, so `scripts/check-models.sh` re-establishes it
-daily and writes `~/.agent-work/transcribe/.models.json`. Read that file before
-concluding anything about which model to use:
+Nothing re-decides this on its own. When someone asks whether something better exists:
 
 ```bash
-~/.agent-work/transcribe/.check-models.sh            # run it now
-jq '{current, parakeet_mlx_latest, watchlist}' ~/.agent-work/transcribe/.models.json
-cat ~/.agent-work/transcribe/.models.log             # only ever appended on a change
+scripts/check-models.sh                                   # what is out there
+scripts/benchmark.py mlx-community/parakeet-tdt-0.6b-v3   # candidate vs the one in use
 ```
 
-It tracks two different gates, because a model can be available and still unusable:
+The store is the test set. Its transcripts are the current model's output, and each
+file's frontmatter holds the uploader's own title, chapters and tags — ground truth
+for spelling that the audio itself never gives you.
 
-- **Weights** — any new MLX build in the parakeet, canary or whisper families.
-- **Runtime** — the latest `parakeet-mlx` on PyPI. `parakeet-unified-en-0.6b` is the
-  English-only build most likely to beat v2, MLX weights for it already exist, and
-  `parakeet-mlx` 0.5.2 still refuses them with `Model is not supported yet!`. So the
-  thing to wait for is a release past 0.5.2, not another checkpoint.
+Scoring is a **casing rate, not a word count**. A model that writes "Homebrew" once
+sentence-initially and "homebrew" eight times has the term but gets it wrong eight
+times in nine, and only a rate sees that. Counting distinct terms scores v3 *above*
+v2; the rate puts it 5.3 points below, which matches reading the transcripts:
 
-The log going quiet means nothing changed. A line in it is the signal to benchmark
-the newcomer against v2 the same way — transcribe a handful of videos already in
-the store and score the proper nouns their `chapters` and `description` confirm.
-Switch only on a win there, then update the model id here and in `source`.
-
-Install the schedule once per machine:
-
-```bash
-cp scripts/check-models.sh ~/.agent-work/transcribe/.check-models.sh
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.nrjdalal.transcribe-model-watch.plist
 ```
+mlx-community/parakeet-tdt-0.6b-v2   43.5%   Homebrew 10/12
+mlx-community/parakeet-tdt-0.6b-v3   38.2%   Homebrew  4/12
+```
+
+Weights are not the only gate. `parakeet-unified-en-0.6b` is English-only and the
+likeliest thing to beat v2; MLX conversions of it already exist, and `parakeet-mlx`
+0.5.2 still answers `Model is not supported yet!`. So the release to wait for is a
+runtime one.
+
+Changing the model is a person's decision and a one-line edit here, which then ships
+to everyone using the skill.
 
 ## Several videos
 
